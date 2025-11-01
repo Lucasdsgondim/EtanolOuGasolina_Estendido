@@ -7,10 +7,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.AdUnits
@@ -38,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -73,7 +78,6 @@ fun EtanoOuGasolina_ExtendidoApp() {
                             contentDescription = it.label
                         )
                     },
-                    label = { Text(it.label) },
                     selected = it == currentDestination,
                     onClick = { currentDestination = it }
                 )
@@ -118,55 +122,74 @@ fun Calculadora(modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .padding(16.dp, 14.dp),
                 horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.Top)
+                verticalArrangement = Arrangement.spacedBy(8.dp))
             {
-                Text(text = "Calculadora",
-                    fontSize = 30.sp)
-                Spacer(modifier=Modifier.height(12.dp))
-                Text(text = "Informe os preços de litro dos combustíveis e a distância entre os postos",
-                    fontSize = 16.sp)
-                Spacer(modifier=Modifier.height(12.dp))
-                Text(text = "Valor do Etanol",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold)
-                Spacer(modifier=Modifier.height(4.dp))
+                BasicText(
+                    text = "Calculadora",
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(.625f),
+                    autoSize = TextAutoSize.StepBased(                    ),
+                )
+                BasicText(text = "Informe os preços de litro dos combustíveis e a distância entre os postos",
+                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Thin),
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(0.625f),
+                    autoSize = TextAutoSize.StepBased())
+                Spacer(modifier = Modifier.weight(.1f))
+                BasicText(text = "Valor do Etanol",
+                    style = TextStyle(fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold),
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(0.325f),
+                    autoSize = TextAutoSize.StepBased()
+                )
                 var valoretanol by rememberSaveable { mutableStateOf("") }
                 OutlinedTextField(value = valoretanol, onValueChange = { valoretanol = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp, 8.dp, 8.dp, 8.dp),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                        .weight(1f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                    label = { Text("Valor do Etanol") },
+                    prefix = { Text("R$") },
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
                 var valorgasolina by rememberSaveable { mutableStateOf("") }
-                Spacer(modifier=Modifier.height(4.dp))
-                Text(text = "Valor da Gasolina",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(end = 12.dp),
-                    textAlign = TextAlign.Right)
-                Spacer(modifier=Modifier.height(4.dp))
+                Spacer(modifier = Modifier.weight(.1f))
+                BasicText(text = "Valor da Gasolina",
+                    style = TextStyle(fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold),
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(0.325f),
+                    autoSize = TextAutoSize.StepBased())
+
                 OutlinedTextField(value = valorgasolina, onValueChange = { valorgasolina = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp, 8.dp, 8.dp, 8.dp),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                        .weight(1f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                    label = { Text("Valor da Gasolina") },
+                    prefix = { Text("R$") },
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
+                Spacer(modifier = Modifier.weight(.1f))
                 var eficiencia by rememberSaveable { mutableStateOf(0.7f) }
-                Spacer(modifier=Modifier.height(4.dp))
                 val opts = listOf(0.7f, 0.75f)
-                Text(text = "Critério de eficiência",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Center)
-                SingleChoiceSegmentedButtonRow (modifier=Modifier.fillMaxWidth()
-                    .padding(8.dp, 8.dp, 8.dp, 8.dp)){
+                BasicText(text = "Critério de eficiência",
+                    style = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center),
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(0.325f),
+                    autoSize = TextAutoSize.StepBased(),
+                    )
+                SingleChoiceSegmentedButtonRow (modifier=Modifier
+                    .weight(1f)
+                    .fillMaxWidth()){
                     opts.forEachIndexed { i, v ->
                     SegmentedButton(
                         selected = (eficiencia == v),
                         onClick = { eficiencia = v },
                         shape = SegmentedButtonDefaults.itemShape(index = i, count = opts.size, baseShape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
+                            modifier=Modifier.fillMaxHeight(fraction = 0.75f),
                     ) {
                         Text("${(v*100).toInt()}%")
                     }
@@ -174,6 +197,11 @@ fun Calculadora(modifier: Modifier = Modifier) {
                 }
             }
         }
+        Card(modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp, 8.dp, 8.dp, 8.dp)
+            .weight(3f),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {  }
         Button(onClick = { /*TODO*/ },
             modifier = modifier
                 .fillMaxWidth()
@@ -182,10 +210,5 @@ fun Calculadora(modifier: Modifier = Modifier) {
             shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {
             Text(text = "Calcular")
         }
-        Card(modifier = Modifier
-            .fillMaxSize()
-            .padding(8.dp, 8.dp, 8.dp, 8.dp)
-            .weight(3f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {  }
     }
 }
