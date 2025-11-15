@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EtanoOuGasolina_Extendido"
+rootProject.name = "EtanolOuGasolina_Extendido"
 include(":app")
  

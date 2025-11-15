@@ -1,4 +1,4 @@
-package com.example.etanoougasolina_extendido
+package com.example.etanolougasolina_extendido
 import kotlinx.serialization.Serializable
 
 @Serializable

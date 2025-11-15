@@ -1,6 +1,5 @@
-package com.example.etanoougasolina_extendido.ui.theme
+package com.example.etanolougasolina_extendido.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +33,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun EtanoOuGasolina_ExtendidoTheme(
+fun EtanolOuGasolina_ExtendidoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,

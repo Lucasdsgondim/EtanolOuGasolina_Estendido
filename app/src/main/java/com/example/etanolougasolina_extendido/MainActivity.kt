@@ -1,4 +1,4 @@
-package com.example.etanoougasolina_extendido
+package com.example.etanolougasolina_extendido
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -45,7 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.etanoougasolina_extendido.ui.theme.EtanoOuGasolina_ExtendidoTheme
+import com.example.etanolougasolina_extendido.ui.theme.EtanolOuGasolina_ExtendidoTheme
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
 import androidx.compose.material3.TextField
@@ -95,8 +95,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         hideSystemNavigationBar()
         setContent {
-            EtanoOuGasolina_ExtendidoTheme {
-                EtanoOuGasolina_ExtendidoApp()
+            EtanolOuGasolina_ExtendidoTheme {
+                EtanolOuGasolina_ExtendidoApp()
             }
         }
     }
@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
 
 @PreviewScreenSizes
 @Composable
-fun EtanoOuGasolina_ExtendidoApp() {
+fun EtanolOuGasolina_ExtendidoApp() {
     val context = LocalContext.current
     val prefs = remember {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

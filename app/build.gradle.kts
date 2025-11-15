@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.etanoougasolina_extendido"
+    namespace = "com.example.etanolougasolina_extendido"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.etanoougasolina_extendido"
+        applicationId = "com.example.etanolougasolina_extendido"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

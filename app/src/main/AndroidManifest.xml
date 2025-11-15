@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -12,14 +13,14 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.EtanoOuGasolina_Extendido">
+        android:theme="@style/Theme.EtanolOuGasolina_Extendido">
 
         <activity
 
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.EtanoOuGasolina_Extendido">
+            android:theme="@style/Theme.EtanolOuGasolina_Extendido">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
