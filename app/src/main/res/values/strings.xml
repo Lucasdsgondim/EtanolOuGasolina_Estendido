@@ -1,24 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Nome do app (opcional, mas costuma existir) -->
     <string name="app_name">Etanol ou Gasolina?</string>
 
-    <!-- Navegação -->
     <string name="dest_calculator">Calculadora</string>
     <string name="dest_favorites">Postos Salvos</string>
 
-    <!-- Recomendações -->
     <string name="recommendation_ethanol">Etanol</string>
     <string name="recommendation_gasoline">Gasolina</string>
 
-    <!-- Mensagens de erro / toasts -->
     <string name="error_fill_values_before_saving">Preencha os valores de Etanol e Gasolina antes de salvar.</string>
     <string name="error_location_unavailable">Localização não disponível para este posto.</string>
     <string name="error_open_maps">Não foi possível abrir o app de mapas.</string>
     <string name="error_invalid_values">Valores inválidos para etanol ou gasolina.</string>
 
-    <!-- Diálogos de salvar/editar posto -->
     <string name="dialog_save_station_title">Salvar posto</string>
     <string name="dialog_edit_station_title">Editar posto</string>
     <string name="dialog_station_name_label">Nome do posto</string>
@@ -27,46 +22,36 @@
     <string name="dialog_save">Salvar</string>
     <string name="dialog_cancel">Cancelar</string>
 
-    <!-- Nome padrão do posto -->
     <string name="station_default_name">Posto %1$d</string>
 
-    <!-- Moeda -->
     <string name="currency_symbol">R$</string>
 
-    <!-- Critério de eficiência -->
     <string name="efficiency_criterion_title">Critério de eficiência</string>
     <string name="efficiency_criterion_row_label">Critério de eficiência:</string>
     <string name="efficiency_criterion_with_value">Critério de eficiência: %1$d%%</string>
-    <!-- Usado nos botões 70% / 75% -->
     <string name="efficiency_option_format">%1$d%%</string>
 
-    <!-- Tela da calculadora -->
     <string name="calculator_title">Calculadora</string>
     <string name="calculator_subtitle">Informe os preços de litro dos combustíveis.</string>
     <string name="ethanol_value_label">Valor do Etanol</string>
     <string name="gasoline_value_label">Valor da Gasolina</string>
 
-    <!-- Resultado -->
     <string name="result_title">Resultado</string>
     <string name="ratio_between_values_label">Razão entre os valores:</string>
     <string name="recommendation_label">Recomendação:</string>
 
-    <!-- Botões principais -->
     <string name="save_station_button">Salvar posto</string>
 
-    <!-- Lista de favoritos -->
     <string name="empty_favorites_message">Nenhum posto salvo ainda. Use o botão &quot;Salvar Posto&quot; na calculadora.</string>
     <string name="selection_count">%1$d selecionado(s)</string>
     <string name="delete_selected">Apagar selecionados</string>
 
-    <!-- Cartão de posto favorito -->
     <string name="favorite_ethanol_price">Etanol: %1$s</string>
     <string name="favorite_gasoline_price">Gasolina: %1$s</string>
     <string name="favorite_ratio">Razão: %1$s</string>
     <string name="favorite_efficiency">Critério: %1$s</string>
     <string name="favorite_recommendation">Recomendação: %1$s</string>
 
-    <!-- Localização -->
     <string name="open_location">Abrir localização</string>
     <string name="location">Localização</string>
 

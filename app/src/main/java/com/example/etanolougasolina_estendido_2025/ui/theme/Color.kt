@@ -1,4 +1,4 @@
-package com.example.etanolougasolina_extendido.ui.theme
+package com.example.etanolougasolina_estendido_2025.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

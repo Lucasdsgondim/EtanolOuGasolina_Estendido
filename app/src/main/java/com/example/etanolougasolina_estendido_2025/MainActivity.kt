@@ -1,4 +1,4 @@
-package com.example.etanolougasolina_extendido
+package com.example.etanolougasolina_estendido_2025
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -45,7 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.etanolougasolina_extendido.ui.theme.EtanolOuGasolina_ExtendidoTheme
+import com.example.etanolougasolina_estendido_2025.ui.theme.EtanolOuGasolina_EstendidoTheme
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
 import androidx.compose.material3.TextField
@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         hideSystemNavigationBar()
         setContent {
-            EtanolOuGasolina_ExtendidoTheme {
+            EtanolOuGasolina_EstendidoTheme {
                 EtanolOuGasolina_ExtendidoApp()
             }
         }
