@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
@@ -75,12 +74,9 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.core.net.toUri
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 
 
@@ -88,11 +84,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideSystemNavigationBar()
         setContent {
             EtanoOuGasolina_ExtendidoTheme {
                 EtanoOuGasolina_ExtendidoApp()
             }
         }
+    }
+    private fun hideSystemNavigationBar() {
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
     }
 }
 
@@ -183,7 +186,7 @@ fun EtanoOuGasolina_ExtendidoApp() {
                 item(
                     icon = {
                         Icon(
-                            it.icon,
+                            imageVector = it.icon,
                             contentDescription = it.label
                         )
                     },
@@ -191,120 +194,126 @@ fun EtanoOuGasolina_ExtendidoApp() {
                     onClick = { currentDestination = it }
                 )
             }
-        },
+        }
     ) {
-        when (currentDestination) {
-            AppDestinations.CALCULATOR -> {
-                Calculadora(
-                    valoretanol = valoretanol,
-                    onValoretanolChange = { valoretanol = it },
-                    valorgasolina = valorgasolina,
-                    onValorgasolinaChange = { valorgasolina = it },
-                    eficiencia = eficiencia,
-                    onEficienciaChange = { eficiencia = it },
-                    opts = opts,
-                    razaoFormat = razaoFormat,
-                    eficienciaFormat = eficienciaFormat,
-                    recomend = recomend,
-                    onSaveFavorite = onSaveFavorite
-                )
-            }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
 
-            AppDestinations.FAVORITES -> {
-                FavoritesScreen(
-                    favorites = favorites,
-                    onOpenLocation = { station ->
+            when (currentDestination) {
+                AppDestinations.CALCULATOR -> {
+                    Calculadora(
+                        valoretanol = valoretanol,
+                        onValoretanolChange = { valoretanol = it },
+                        valorgasolina = valorgasolina,
+                        onValorgasolinaChange = { valorgasolina = it },
+                        eficiencia = eficiencia,
+                        onEficienciaChange = { eficiencia = it },
+                        opts = opts,
+                        razaoFormat = razaoFormat,
+                        eficienciaFormat = eficienciaFormat,
+                        recomend = recomend,
+                        onSaveFavorite = onSaveFavorite
+                    )
+                }
 
-                        val lat = station.latitude
-                        val lon = station.longitude
+                AppDestinations.FAVORITES -> {
+                    FavoritesScreen(
+                        favorites = favorites,
+                        onOpenLocation = { station ->
 
-                        if (lat == null || lon == null) {
-                            Toast.makeText(
-                                context,
-                                "Localização não disponível para este posto.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            val uri =
-                                "geo:$lat,$lon?q=$lat,$lon(${Uri.encode(station.name)})".toUri()
-                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            val lat = station.latitude
+                            val lon = station.longitude
 
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
+                            if (lat == null || lon == null) {
                                 Toast.makeText(
                                     context,
-                                    "Não foi possível abrir o app de mapas.",
+                                    "Localização não disponível para este posto.",
                                     Toast.LENGTH_SHORT
                                 ).show()
+                            } else {
+                                val uri =
+                                    "geo:$lat,$lon?q=$lat,$lon(${Uri.encode(station.name)})".toUri()
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "Não foi possível abrir o app de mapas.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
+                        }
+                    )
+                }
+            }
+
+            if (showSaveDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showSaveDialog = false
+                        stationNameInput = ""
+                    },
+                    title = { Text(text = "Salvar posto") },
+                    text = {
+                        OutlinedTextField(
+                            value = stationNameInput,
+                            onValueChange = { stationNameInput = it },
+                            singleLine = true,
+                            label = { Text("Nome do posto") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                if (canSave) {
+                                    val nextId = favorites.size + 1
+                                    val finalName =
+                                        stationNameInput.ifBlank { "Posto $nextId" }
+
+                                    favorites = favorites + FavoriteStation(
+                                        id = nextId,
+                                        name = finalName,
+                                        ethanolPrice = etanolDouble,
+                                        gasolinePrice = gasolinaDouble,
+                                        efficiency = eficiencia,
+                                        ratio = razao,
+                                        recommendation = recomend,
+                                        latitude = lastLocation?.latitude,
+                                        longitude = lastLocation?.longitude
+                                    )
+                                }
+                                stationNameInput = ""
+                                showSaveDialog = false
+                            }
+                        ) {
+                            Text("Salvar")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                stationNameInput = ""
+                                showSaveDialog = false
+                            }
+                        ) {
+                            Text("Cancelar")
                         }
                     }
                 )
             }
-        }
-
-        if (showSaveDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showSaveDialog = false
-                    stationNameInput = ""
-                },
-                title = { Text(text = "Salvar posto") },
-                text = {
-                    OutlinedTextField(
-                        value = stationNameInput,
-                        onValueChange = { stationNameInput = it },
-                        singleLine = true,
-                        label = { Text("Nome do posto") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            if (canSave) {
-                                val nextId = favorites.size + 1
-                                val finalName =
-                                    stationNameInput.ifBlank { "Posto $nextId" }
-
-                                favorites = favorites + FavoriteStation(
-                                    id = nextId,
-                                    name = finalName,
-                                    ethanolPrice = etanolDouble,
-                                    gasolinePrice = gasolinaDouble,
-                                    efficiency = eficiencia,
-                                    ratio = razao,
-                                    recommendation = recomend,
-                                    latitude = lastLocation?.latitude,
-                                    longitude = lastLocation?.longitude
-                                )
-                            }
-                            stationNameInput = ""
-                            showSaveDialog = false
-                        }
-                    ) {
-                        Text("Salvar")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            stationNameInput = ""
-                            showSaveDialog = false
-                        }
-                    ) {
-                        Text("Cancelar")
-                    }
-                }
-            )
         }
     }
 }
 
 
 
-enum class AppDestinations(
+    enum class AppDestinations(
     val label: String,
     val icon: ImageVector,
 ) {
@@ -679,19 +688,20 @@ fun CalculadoraLandscape(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             )
             {
-                BasicText(
+                Text(
                     text = "Calculadora",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(.625f),
+                        .weight(.7f),
                     autoSize = TextAutoSize.StepBased(),
                 )
                 Text(
-                    text = "Informe os preços de litro dos combustíveis e a distância entre os postos",
-                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Light),
+                    text = "Informe os preços de litro dos combustíveis",
+                    style = TextStyle(fontWeight = FontWeight.Light),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(0.625f),
+                        .weight(0.35f),
+                    maxLines = 1,
                     autoSize = TextAutoSize.StepBased()
                 )
                 Row(modifier = Modifier
@@ -746,7 +756,7 @@ fun CalculadoraLandscape(
 
                 Row(modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1.325f),
+                    .weight(1.125f),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically){
                     Text(
