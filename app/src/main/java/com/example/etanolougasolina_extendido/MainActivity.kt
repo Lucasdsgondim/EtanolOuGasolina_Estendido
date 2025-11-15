@@ -87,6 +87,11 @@ import androidx.compose.material3.Switch
 import android.content.Context
 import kotlinx.serialization.json.Json
 import androidx.core.content.edit
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
+import java.text.DateFormat
+import java.util.Date
+
 
 
 class MainActivity : ComponentActivity() {
@@ -100,6 +105,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     private fun hideSystemNavigationBar() {
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.systemBarsBehavior =
@@ -147,20 +153,23 @@ fun EtanolOuGasolina_ExtendidoApp() {
 
     val opts = listOf(0.7f, 0.75f)
 
-    //CÁLCULOS DA TELA PRINCIPAL
+    // CÁLCULOS DA TELA PRINCIPAL
 
     val etanolDouble = valoretanol.replace(',', '.').toDoubleOrNull() ?: 0.0
     val gasolinaDouble = valorgasolina.replace(',', '.').toDoubleOrNull() ?: 0.0
 
     val razao = if (gasolinaDouble > 0) etanolDouble / gasolinaDouble else 0.0
-    val recomend =
-        if (gasolinaDouble > 0 && razao <= eficiencia) "Etanol" else "Gasolina"
+    val recomend = if (gasolinaDouble > 0 && razao <= eficiencia) {
+        stringResource(R.string.recommendation_ethanol)
+    } else {
+        stringResource(R.string.recommendation_gasoline)
+    }
 
     val formatPercent = NumberFormat.getPercentInstance(Locale.getDefault())
     val razaoFormat = formatPercent.format(razao)
     val eficienciaFormat = formatPercent.format(eficiencia)
 
-    //LOCALIZAÇÃO
+    // LOCALIZAÇÃO
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -200,16 +209,15 @@ fun EtanolOuGasolina_ExtendidoApp() {
         }
     }
 
-    //LÓGICA PARA SALVAR FAVORITO
+    // LÓGICA PARA SALVAR FAVORITO
 
     val canSave = etanolDouble > 0.0 && gasolinaDouble > 0.0
-
 
     val onSaveFavorite: () -> Unit = onSaveFavorite@{
         if (!canSave) {
             Toast.makeText(
                 context,
-                "Preencha os valores de Etanol e Gasolina antes de salvar.",
+                context.getString(R.string.error_fill_values_before_saving),
                 Toast.LENGTH_SHORT
             ).show()
             return@onSaveFavorite
@@ -219,11 +227,10 @@ fun EtanolOuGasolina_ExtendidoApp() {
             locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION)
         } else {
             val nextId = favorites.size + 1
-            stationNameInput = "Posto $nextId"
+            stationNameInput = context.getString(R.string.station_default_name, nextId)
             showSaveDialog = true
         }
     }
-
 
     fun toggleFavoriteSelection(station: FavoriteStation) {
         val id = station.id
@@ -253,6 +260,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
             selectedFavoriteIds = emptyList()
         }
     }
+
     LaunchedEffect(eficiencia) {
         prefs.edit {
             putFloat(PREF_KEY_EFFICIENCY, eficiencia)
@@ -266,20 +274,18 @@ fun EtanolOuGasolina_ExtendidoApp() {
         }
     }
 
-
-
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            AppDestinations.entries.forEach {
+            AppDestinations.entries.forEach { destination ->
                 item(
                     icon = {
                         Icon(
-                            imageVector = it.icon,
-                            contentDescription = it.label
+                            imageVector = destination.icon,
+                            contentDescription = stringResource(destination.labelRes)
                         )
                     },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
+                    selected = destination == currentDestination,
+                    onClick = { currentDestination = destination }
                 )
             }
         }
@@ -299,7 +305,8 @@ fun EtanolOuGasolina_ExtendidoApp() {
                         onEficienciaChange = { eficiencia = it },
                         opts = opts,
                         razaoFormat = razaoFormat,
-                        eficienciaFormat = eficienciaFormat,
+                        eficienciaFormat
+                        = eficienciaFormat,
                         recomend = recomend,
                         onSaveFavorite = onSaveFavorite
                     )
@@ -320,7 +327,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
                             if (lat == null || lon == null) {
                                 Toast.makeText(
                                     context,
-                                    "Localização não disponível para este posto.",
+                                    context.getString(R.string.error_location_unavailable),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
@@ -333,7 +340,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
                                 } catch (_: Exception) {
                                     Toast.makeText(
                                         context,
-                                        "Não foi possível abrir o app de mapas.",
+                                        context.getString(R.string.error_open_maps),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -349,13 +356,13 @@ fun EtanolOuGasolina_ExtendidoApp() {
                         showSaveDialog = false
                         stationNameInput = ""
                     },
-                    title = { Text(text = "Salvar posto") },
+                    title = { Text(text = stringResource(R.string.dialog_save_station_title)) },
                     text = {
                         OutlinedTextField(
                             value = stationNameInput,
                             onValueChange = { stationNameInput = it },
                             singleLine = true,
-                            label = { Text("Nome do posto") },
+                            label = { Text(stringResource(R.string.dialog_station_name_label)) },
                             modifier = Modifier.fillMaxWidth()
                         )
                     },
@@ -365,7 +372,12 @@ fun EtanolOuGasolina_ExtendidoApp() {
                                 if (canSave) {
                                     val nextId = favorites.size + 1
                                     val finalName =
-                                        stationNameInput.ifBlank { "Posto $nextId" }
+                                        stationNameInput.ifBlank {
+                                            context.getString(
+                                                R.string.station_default_name,
+                                                nextId
+                                            )
+                                        }
 
                                     favorites = favorites + FavoriteStation(
                                         id = nextId,
@@ -376,7 +388,8 @@ fun EtanolOuGasolina_ExtendidoApp() {
                                         ratio = razao,
                                         recommendation = recomend,
                                         latitude = lastLocation?.latitude,
-                                        longitude = lastLocation?.longitude
+                                        longitude = lastLocation?.longitude,
+                                        createdAt = System.currentTimeMillis()
                                     )
 
                                     valoretanol = ""
@@ -386,7 +399,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
                                 showSaveDialog = false
                             }
                         ) {
-                            Text("Salvar")
+                            Text(stringResource(R.string.dialog_save))
                         }
                     },
                     dismissButton = {
@@ -396,7 +409,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
                                 showSaveDialog = false
                             }
                         ) {
-                            Text("Cancelar")
+                            Text(stringResource(R.string.dialog_cancel))
                         }
                     }
                 )
@@ -418,32 +431,68 @@ fun EtanolOuGasolina_ExtendidoApp() {
 
                 AlertDialog(
                     onDismissRequest = { editingFavorite = null },
-                    title = { Text("Editar posto") },
+                    title = {
+                        Text(stringResource(R.string.dialog_edit_station_title))
+                    },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = name,
                                 onValueChange = { name = it },
                                 singleLine = true,
-                                label = { Text("Nome do posto") },
+                                label = {
+                                    Text(
+                                        stringResource(
+                                            R.string.dialog_station_name_label
+                                        )
+                                    )
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             OutlinedTextField(
                                 value = etanolText,
                                 onValueChange = { etanolText = it },
                                 singleLine = true,
-                                label = { Text("Valor do Etanol") },
-                                prefix = { Text("R$") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                label = {
+                                    Text(
+                                        stringResource(
+                                            R.string.dialog_ethanol_value_label
+                                        )
+                                    )
+                                },
+                                prefix = {
+                                    Text(
+                                        stringResource(
+                                            R.string.currency_symbol
+                                        )
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number
+                                ),
                                 modifier = Modifier.fillMaxWidth()
                             )
                             OutlinedTextField(
                                 value = gasolinaText,
                                 onValueChange = { gasolinaText = it },
                                 singleLine = true,
-                                label = { Text("Valor da Gasolina") },
-                                prefix = { Text("R$") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                label = {
+                                    Text(
+                                        stringResource(
+                                            R.string.dialog_gasoline_value_label
+                                        )
+                                    )
+                                },
+                                prefix = {
+                                    Text(
+                                        stringResource(
+                                            R.string.currency_symbol
+                                        )
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number
+                                ),
                                 modifier = Modifier.fillMaxWidth()
                             )
 
@@ -455,13 +504,17 @@ fun EtanolOuGasolina_ExtendidoApp() {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Critério de eficiência: ${(localEfficiency * 100).toInt()}%",
+                                    text = stringResource(
+                                        R.string.efficiency_criterion_with_value,
+                                        (localEfficiency * 100).toInt()
+                                    ),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Switch(
                                     checked = localEfficiency >= 0.75f,
                                     onCheckedChange = { checked ->
-                                        localEfficiency = if (checked) 0.75f else 0.7f
+                                        localEfficiency =
+                                            if (checked) 0.75f else 0.7f
                                     }
                                 )
                             }
@@ -470,13 +523,23 @@ fun EtanolOuGasolina_ExtendidoApp() {
                     confirmButton = {
                         TextButton(
                             onClick = {
-                                val etanol = etanolText.replace(',', '.').toDoubleOrNull()
-                                val gasolina = gasolinaText.replace(',', '.').toDoubleOrNull()
+                                val etanol =
+                                    etanolText.replace(',', '.').toDoubleOrNull()
+                                val gasolina =
+                                    gasolinaText.replace(',', '.').toDoubleOrNull()
 
                                 if (etanol != null && gasolina != null && gasolina > 0.0) {
                                     val newRatio = etanol / gasolina
                                     val newRecommendation =
-                                        if (newRatio <= localEfficiency) "Etanol" else "Gasolina"
+                                        if (newRatio <= localEfficiency) {
+                                            context.getString(
+                                                R.string.recommendation_ethanol
+                                            )
+                                        } else {
+                                            context.getString(
+                                                R.string.recommendation_gasoline
+                                            )
+                                        }
 
                                     favorites = favorites.map {
                                         if (it.id == station.id) {
@@ -494,36 +557,32 @@ fun EtanolOuGasolina_ExtendidoApp() {
                                 } else {
                                     Toast.makeText(
                                         context,
-                                        "Valores inválidos para etanol/gasolina.",
+                                        context.getString(R.string.error_invalid_values),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
                             }
                         ) {
-                            Text("Salvar")
+                            Text(stringResource(R.string.dialog_save))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { editingFavorite = null }) {
-                            Text("Cancelar")
+                            Text(stringResource(R.string.dialog_cancel))
                         }
                     }
                 )
             }
-
         }
     }
 }
 
-
-
-
-    enum class AppDestinations(
-    val label: String,
+enum class AppDestinations(
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
-    CALCULATOR("Calculadora", Icons.Default.Calculate),
-    FAVORITES("Postos Salvos", Icons.Default.LocalGasStation),
+    CALCULATOR(R.string.dest_calculator, Icons.Default.Calculate),
+    FAVORITES(R.string.dest_favorites, Icons.Default.LocalGasStation),
 }
 
 @Composable
@@ -580,7 +639,6 @@ fun Calculadora(
     }
 }
 
-
 @Composable
 fun CalculadoraPortrait(
     modifier: Modifier = Modifier,
@@ -608,27 +666,25 @@ fun CalculadoraPortrait(
                 .fillMaxSize()
                 .padding(8.dp, 28.dp, 8.dp, 8.dp)
                 .weight(7f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
-        )
-        {
+            shape = RoundedCornerShape(20.dp)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp, 14.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
-            )
-            {
+            ) {
                 Text(
-                    text = "Calculadora",
+                    text = stringResource(R.string.calculator_title),
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(.625f),
                     autoSize = TextAutoSize.StepBased(),
                 )
                 Text(
-                    text = "Informe os preços de litro dos combustíveis e a distância entre os postos",
-                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Light),
+                    text = stringResource(R.string.calculator_subtitle),
+                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Thin),
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.625f),
@@ -636,7 +692,7 @@ fun CalculadoraPortrait(
                 )
                 Spacer(modifier = Modifier.weight(.1f))
                 Text(
-                    text = "Valor do Etanol",
+                    text = stringResource(R.string.ethanol_value_label),
                     style = TextStyle(fontSize = 18.sp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -645,20 +701,21 @@ fun CalculadoraPortrait(
                 )
 
                 OutlinedTextField(
-                    value = valoretanol, onValueChange = { onValoretanolChange(it) },
+                    value = valoretanol,
+                    onValueChange = { onValoretanolChange(it) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1.15f),
                     singleLine = true,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    label = { Text("Valor do Etanol") },
-                    prefix = { Text("R$") },
+                    shape = RoundedCornerShape(16.dp),
+                    label = { Text(stringResource(R.string.ethanol_value_label)) },
+                    prefix = { Text(stringResource(R.string.currency_symbol)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
 
                 Spacer(modifier = Modifier.weight(.1f))
                 Text(
-                    text = "Valor da Gasolina",
+                    text = stringResource(R.string.gasoline_value_label),
                     style = TextStyle(fontSize = 18.sp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -667,20 +724,21 @@ fun CalculadoraPortrait(
                 )
 
                 OutlinedTextField(
-                    value = valorgasolina, onValueChange = { onValorgasolinaChange(it) },
+                    value = valorgasolina,
+                    onValueChange = { onValorgasolinaChange(it) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1.15f),
                     singleLine = true,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    label = { Text("Valor da Gasolina") },
-                    prefix = { Text("R$") },
+                    shape = RoundedCornerShape(16.dp),
+                    label = { Text(stringResource(R.string.gasoline_value_label)) },
+                    prefix = { Text(stringResource(R.string.currency_symbol)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 Spacer(modifier = Modifier.weight(.1f))
 
                 Text(
-                    text = "Critério de eficiência",
+                    text = stringResource(R.string.efficiency_criterion_title),
                     style = TextStyle(
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center
@@ -702,11 +760,16 @@ fun CalculadoraPortrait(
                             shape = SegmentedButtonDefaults.itemShape(
                                 index = i,
                                 count = opts.size,
-                                baseShape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                                baseShape = RoundedCornerShape(16.dp)
                             ),
                             modifier = Modifier.fillMaxHeight(fraction = 0.75f),
                         ) {
-                            Text("${(v * 100).toInt()}%")
+                            Text(
+                                stringResource(
+                                    R.string.efficiency_option_format,
+                                    (v * 100).toInt()
+                                )
+                            )
                         }
                     }
                 }
@@ -717,9 +780,8 @@ fun CalculadoraPortrait(
                 .fillMaxSize()
                 .padding(8.dp, 8.dp, 8.dp, 8.dp)
                 .weight(3f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
-        )
-        {
+            shape = RoundedCornerShape(20.dp)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -728,7 +790,7 @@ fun CalculadoraPortrait(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Resultado",
+                    text = stringResource(R.string.result_title),
                     style = TextStyle(fontSize = 18.sp),
                     autoSize = TextAutoSize.StepBased(),
                     modifier = Modifier
@@ -743,15 +805,14 @@ fun CalculadoraPortrait(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Razão entre os valores:",
+                        text = stringResource(R.string.ratio_between_values_label),
                         style = TextStyle(
                             textAlign = TextAlign.Left,
                             fontWeight = FontWeight.Light
                         ),
                         modifier = Modifier.weight(2f),
                         autoSize = TextAutoSize.StepBased(),
-
-                        )
+                    )
                     Text(
                         text = razaoFormat,
                         style = TextStyle(
@@ -760,8 +821,7 @@ fun CalculadoraPortrait(
                         ),
                         modifier = Modifier.weight(1f),
                         autoSize = TextAutoSize.StepBased(),
-
-                        )
+                    )
                 }
                 Row(
                     modifier = Modifier
@@ -770,15 +830,14 @@ fun CalculadoraPortrait(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Críterio de eficiência:",
+                        text = stringResource(R.string.efficiency_criterion_row_label),
                         style = TextStyle(
                             textAlign = TextAlign.Left,
                             fontWeight = FontWeight.Light
                         ),
                         modifier = Modifier.weight(2f),
                         autoSize = TextAutoSize.StepBased(),
-
-                        )
+                    )
                     Text(
                         text = eficienciaFormat,
                         style = TextStyle(
@@ -789,8 +848,7 @@ fun CalculadoraPortrait(
                             .fillMaxHeight()
                             .weight(1f),
                         autoSize = TextAutoSize.StepBased(),
-
-                        )
+                    )
                 }
                 Row(
                     modifier = Modifier
@@ -798,11 +856,11 @@ fun CalculadoraPortrait(
                         .weight(1.25f)
                 ) {
                     Text(
-                        text = "Recomendação:", style = TextStyle(textAlign = TextAlign.Left),
+                        text = stringResource(R.string.recommendation_label),
+                        style = TextStyle(textAlign = TextAlign.Left),
                         modifier = Modifier.weight(2f),
                         autoSize = TextAutoSize.StepBased(),
-
-                        )
+                    )
                 }
                 Card(
                     modifier = Modifier
@@ -815,7 +873,6 @@ fun CalculadoraPortrait(
                     elevation = CardDefaults.cardElevation(
                         defaultElevation = 0.dp
                     )
-
                 ) {
                     Box(
                         modifier = modifier.fillMaxSize(),
@@ -831,8 +888,6 @@ fun CalculadoraPortrait(
                         )
                     }
                 }
-
-
             }
         }
         Button(
@@ -841,10 +896,10 @@ fun CalculadoraPortrait(
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(8.dp, 8.dp, 8.dp, 8.dp),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(20.dp)
         ) {
             Text(
-                text = "Salvar Posto",
+                text = stringResource(R.string.save_station_button),
                 style = TextStyle(textAlign = TextAlign.Center),
                 autoSize = TextAutoSize.StepBased(),
                 modifier = Modifier
@@ -882,66 +937,66 @@ fun CalculadoraLandscape(
                 .fillMaxSize()
                 .padding(8.dp, 28.dp, 4.dp, 8.dp)
                 .weight(1f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
-        )
-        {
+            shape = RoundedCornerShape(20.dp)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp, 14.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
-            )
-            {
+            ) {
                 Text(
-                    text = "Calculadora",
+                    text = stringResource(R.string.calculator_title),
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(.7f),
                     autoSize = TextAutoSize.StepBased(),
                 )
                 Text(
-                    text = "Informe os preços de litro dos combustíveis",
-                    style = TextStyle(fontWeight = FontWeight.Light),
+                    text = stringResource(R.string.calculator_subtitle),
+                    style = TextStyle(fontWeight = FontWeight.Thin),
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.35f),
                     maxLines = 1,
                     autoSize = TextAutoSize.StepBased()
                 )
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1.325f),
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1.325f),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically){
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Valor do Etanol:",
+                        text = stringResource(R.string.ethanol_value_label) + ":",
                         modifier = Modifier
                             .weight(2f),
                         textAlign = TextAlign.Left,
                         maxLines = 1,
                         autoSize = TextAutoSize.StepBased(10.sp, 25.sp)
                     )
-
-
-
                     TextField(
-                        value = valoretanol, onValueChange = { onValoretanolChange(it) },
+                        value = valoretanol,
+                        onValueChange = { onValoretanolChange(it) },
                         modifier = Modifier
                             .weight(1.75f),
                         singleLine = true,
-                        label = { Text("Valor do Etanol") },
-                        prefix = { Text("R$") },
+                        label = { Text(stringResource(R.string.ethanol_value_label)) },
+                        prefix = { Text(stringResource(R.string.currency_symbol)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     )
                 }
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1.325f),
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1.325f),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically){
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Valor da Gasolina:",
+                        text = stringResource(R.string.gasoline_value_label) + ":",
                         modifier = Modifier.weight(2f),
                         textAlign = TextAlign.Left,
                         maxLines = 1,
@@ -949,23 +1004,26 @@ fun CalculadoraLandscape(
                     )
 
                     TextField(
-                        value = valorgasolina, onValueChange = { onValorgasolinaChange(it) },
+                        value = valorgasolina,
+                        onValueChange = { onValorgasolinaChange(it) },
                         modifier = Modifier
                             .weight(1.75f),
                         singleLine = true,
-                        label = { Text("Valor da Gasolina") },
-                        prefix = { Text("R$") },
+                        label = { Text(stringResource(R.string.gasoline_value_label)) },
+                        prefix = { Text(stringResource(R.string.currency_symbol)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
 
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1.125f),
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1.125f),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically){
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Critério de eficiência:",
+                        text = stringResource(R.string.efficiency_criterion_row_label),
                         style = TextStyle(
                             fontSize = 18.sp,
                             textAlign = TextAlign.Center
@@ -989,29 +1047,33 @@ fun CalculadoraLandscape(
                                 shape = SegmentedButtonDefaults.itemShape(
                                     index = i,
                                     count = opts.size,
-                                    baseShape = androidx.compose.foundation.shape.RoundedCornerShape(
-                                        16.dp
-                                    )
+                                    baseShape = RoundedCornerShape(16.dp)
                                 ),
                                 modifier = Modifier.fillMaxHeight(fraction = 0.75f),
                             ) {
-                                Text("${(v * 100).toInt()}%")
+                                Text(
+                                    stringResource(
+                                        R.string.efficiency_option_format,
+                                        (v * 100).toInt()
+                                    )
+                                )
                             }
                         }
                     }
                 }
             }
         }
-        Column(modifier = Modifier
-            .weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+        ) {
             Card(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp, 28.dp, 8.dp, 2.dp)
                     .weight(3f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
-            )
-            {
+                shape = RoundedCornerShape(20.dp)
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1020,7 +1082,7 @@ fun CalculadoraLandscape(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Resultado",
+                        text = stringResource(R.string.result_title),
                         style = TextStyle(fontSize = 18.sp),
                         autoSize = TextAutoSize.StepBased(),
                         modifier = Modifier
@@ -1035,15 +1097,14 @@ fun CalculadoraLandscape(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Razão entre os valores:",
+                            text = stringResource(R.string.ratio_between_values_label),
                             style = TextStyle(
                                 textAlign = TextAlign.Left,
                                 fontWeight = FontWeight.Light
                             ),
                             modifier = Modifier.weight(2f),
                             autoSize = TextAutoSize.StepBased(),
-
-                            )
+                        )
                         Text(
                             text = razaoFormat,
                             style = TextStyle(
@@ -1052,8 +1113,7 @@ fun CalculadoraLandscape(
                             ),
                             modifier = Modifier.weight(1f),
                             autoSize = TextAutoSize.StepBased(),
-
-                            )
+                        )
                     }
                     Row(
                         modifier = Modifier
@@ -1062,15 +1122,14 @@ fun CalculadoraLandscape(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Críterio de eficiência:",
+                            text = stringResource(R.string.efficiency_criterion_row_label),
                             style = TextStyle(
                                 textAlign = TextAlign.Left,
                                 fontWeight = FontWeight.Light
                             ),
                             modifier = Modifier.weight(2f),
                             autoSize = TextAutoSize.StepBased(),
-
-                            )
+                        )
                         Text(
                             text = eficienciaFormat,
                             style = TextStyle(
@@ -1081,8 +1140,7 @@ fun CalculadoraLandscape(
                                 .fillMaxHeight()
                                 .weight(1f),
                             autoSize = TextAutoSize.StepBased(),
-
-                            )
+                        )
                     }
                     Row(
                         modifier = Modifier
@@ -1090,11 +1148,11 @@ fun CalculadoraLandscape(
                             .weight(1.25f)
                     ) {
                         Text(
-                            text = "Recomendação:", style = TextStyle(textAlign = TextAlign.Left),
+                            text = stringResource(R.string.recommendation_label),
+                            style = TextStyle(textAlign = TextAlign.Left),
                             modifier = Modifier.weight(2f),
                             autoSize = TextAutoSize.StepBased(),
-
-                            )
+                        )
                     }
                     Card(
                         modifier = Modifier
@@ -1107,7 +1165,6 @@ fun CalculadoraLandscape(
                         elevation = CardDefaults.cardElevation(
                             defaultElevation = 0.dp
                         )
-
                     ) {
                         Box(
                             modifier = modifier.fillMaxSize(),
@@ -1123,8 +1180,6 @@ fun CalculadoraLandscape(
                             )
                         }
                     }
-
-
                 }
             }
             Button(
@@ -1133,10 +1188,10 @@ fun CalculadoraLandscape(
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(8.dp, 8.dp, 8.dp, 8.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Text(
-                    text = "Salvar Posto",
+                    text = stringResource(R.string.save_station_button),
                     style = TextStyle(textAlign = TextAlign.Center),
                     autoSize = TextAutoSize.StepBased(),
                     modifier = Modifier
@@ -1147,6 +1202,7 @@ fun CalculadoraLandscape(
         }
     }
 }
+
 @Composable
 fun FavoritesScreen(
     favorites: List<FavoriteStation>,
@@ -1166,7 +1222,7 @@ fun FavoritesScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Nenhum posto salvo ainda.\nUse o botão \"Salvar Posto\" na calculadora.",
+                text = stringResource(R.string.empty_favorites_message),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -1185,13 +1241,16 @@ fun FavoritesScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${selectedIds.size} selecionado(s)",
+                        text = stringResource(
+                            R.string.selection_count,
+                            selectedIds.size
+                        ),
                         style = MaterialTheme.typography.titleMedium
                     )
                     IconButton(onClick = onDeleteSelected) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Apagar selecionados"
+                            contentDescription = stringResource(R.string.delete_selected)
                         )
                     }
                 }
@@ -1217,8 +1276,6 @@ fun FavoritesScreen(
     }
 }
 
-
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FavoriteStationCard(
@@ -1231,6 +1288,17 @@ fun FavoriteStationCard(
 ) {
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault())
     val percentFormat = NumberFormat.getPercentInstance(Locale.getDefault())
+
+    val dateFormatter = remember {
+        DateFormat.getDateTimeInstance(
+            DateFormat.SHORT,
+            DateFormat.SHORT,
+            Locale.getDefault()
+        )
+    }
+    val createdAtText = remember(favorite.createdAt) {
+        dateFormatter.format(Date(favorite.createdAt))
+    }
 
     val colors = if (selected) {
         CardDefaults.cardColors(
@@ -1263,18 +1331,32 @@ fun FavoriteStationCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+
+            Text(
+                text = stringResource(R.string.favorite_created_at, createdAtText),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Etanol: ${currencyFormat.format(favorite.ethanolPrice)}",
+                    text = stringResource(
+                        R.string.favorite_ethanol_price,
+                        currencyFormat.format(favorite.ethanolPrice)
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "Gasolina: ${currencyFormat.format(favorite.gasolinePrice)}",
+                    text = stringResource(
+                        R.string.favorite_gasoline_price,
+                        currencyFormat.format(favorite.gasolinePrice)
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1286,19 +1368,24 @@ fun FavoriteStationCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Razão: ${percentFormat.format(favorite.ratio)}",
+                    text = stringResource(
+                        R.string.favorite_ratio,
+                        percentFormat.format(favorite.ratio)
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "Critério: ${percentFormat.format(favorite.efficiency)}",
+                    text = stringResource(
+                        R.string.favorite_efficiency,
+                        percentFormat.format(favorite.efficiency)
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1316,7 +1403,10 @@ fun FavoriteStationCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Recomendação: ${favorite.recommendation}",
+                        text = stringResource(
+                            R.string.favorite_recommendation,
+                            favorite.recommendation
+                        ),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
@@ -1341,12 +1431,12 @@ fun FavoriteStationCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Abrir localização",
+                            contentDescription = stringResource(R.string.open_location),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Localização",
+                            text = stringResource(R.string.location),
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -1355,6 +1445,7 @@ fun FavoriteStationCard(
         }
     }
 }
+
 
 private const val PREFS_NAME = "etano_ou_gasolina_prefs"
 private const val PREF_KEY_FAVORITES = "favorites_json"

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ethanol or Gas?</string>
+    <string name="dest_calculator">Calculator</string>
+    <string name="dest_favorites">Favorite Stations</string>
+    <string name="recommendation_ethanol">Ethanol</string>
+    <string name="recommendation_gasoline">Gasoline</string>
+    <string name="error_fill_values_before_saving">Fill all fuel prices before saving.</string>
+    <string name="error_location_unavailable">No location available for this station.</string>
+    <string name="error_open_maps">Unable to open a map app.</string>
+    <string name="error_invalid_values">Invalid values for ethanol or gasoline.</string>
+    <string name="dialog_save_station_title">Save station</string>
+    <string name="dialog_edit_station_title">Edit station</string>
+    <string name="dialog_station_name_label">Station name</string>
+    <string name="dialog_ethanol_value_label">Ethanol price</string>
+    <string name="dialog_gasoline_value_label">Gasoline price</string>
+    <string name="dialog_save">Save</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="station_default_name">Station %1$d</string>
+    <string name="currency_symbol">$</string>
+    <string name="efficiency_criterion_title">Efficiency criterion</string>
+    <string name="efficiency_criterion_row_label">Efficiency criterion:</string>
+    <string name="efficiency_criterion_with_value">Efficiency criterion: %1$d%%</string>
+    <string name="efficiency_option_format">%1$d%%</string>
+    <string name="calculator_title">Calculator</string>
+    <string name="calculator_subtitle">Provide the fuel prices per liter.</string>
+    <string name="ethanol_value_label">Ethanol price</string>
+    <string name="gasoline_value_label">Gasoline price</string>
+    <string name="result_title">Result</string>
+    <string name="ratio_between_values_label">Ratio between values:</string>
+    <string name="recommendation_label">Recommendation:</string>
+    <string name="save_station_button">Save station</string>
+    <string name="empty_favorites_message">No gas stations saved yet. Use the &quot;Save station&quot; button at the calculator.</string>
+    <string name="selection_count">%1$d selected</string>
+    <string name="delete_selected">Delete selected</string>
+    <string name="favorite_ethanol_price">Ethanol: %1$s</string>
+    <string name="favorite_gasoline_price">Gasoline: %1$s</string>
+    <string name="favorite_ratio">Ratio: %1$s</string>
+    <string name="favorite_efficiency">Criterion: %1$s</string>
+    <string name="favorite_recommendation">Recommendation: %1$s</string>
+    <string name="open_location">Open location</string>
+    <string name="location">Location</string>
+    <string name="favorite_created_at">Added at %1$s</string>
+</resources>

@@ -11,7 +11,8 @@ data class FavoriteStation(
     val ratio: Double,
     val recommendation: String,
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 const val FINE_LOCATION_PERMISSION = "android.permission.ACCESS_FINE_LOCATION"
