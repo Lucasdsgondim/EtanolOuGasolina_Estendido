@@ -1,6 +1,7 @@
 package com.example.etanoougasolina_extendido
-import java.io.Serializable
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class FavoriteStation(
     val id: Int,
     val name: String,
@@ -11,5 +12,6 @@ data class FavoriteStation(
     val recommendation: String,
     val latitude: Double? = null,
     val longitude: Double? = null
-) : Serializable
+)
+
 const val FINE_LOCATION_PERMISSION = "android.permission.ACCESS_FINE_LOCATION"

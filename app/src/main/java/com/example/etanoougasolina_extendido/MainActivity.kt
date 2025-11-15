@@ -77,7 +77,16 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
+import android.content.Context
+import kotlinx.serialization.json.Json
+import androidx.core.content.edit
 
 
 class MainActivity : ComponentActivity() {
@@ -95,7 +104,7 @@ class MainActivity : ComponentActivity() {
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.hide(WindowInsetsCompat.Type.statusBars())
     }
 }
 
@@ -103,17 +112,42 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun EtanoOuGasolina_ExtendidoApp() {
     val context = LocalContext.current
+    val prefs = remember {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    // ESTADO PRINCIPAL
 
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.CALCULATOR) }
     var valoretanol by rememberSaveable { mutableStateOf("") }
     var valorgasolina by rememberSaveable { mutableStateOf("") }
-    var eficiencia by rememberSaveable { mutableFloatStateOf(0.7f) }
-    var favorites by rememberSaveable { mutableStateOf(listOf<FavoriteStation>()) }
+
+    var eficiencia by rememberSaveable {
+        mutableFloatStateOf(
+            prefs.getFloat(PREF_KEY_EFFICIENCY, 0.7f)
+        )
+    }
+
+    var favorites by rememberSaveable {
+        mutableStateOf(
+            prefs.getString(PREF_KEY_FAVORITES, null)?.let { json ->
+                runCatching {
+                    Json.decodeFromString<List<FavoriteStation>>(json)
+                }.getOrElse { emptyList() }
+            } ?: emptyList()
+        )
+    }
+    var selectedFavoriteIds by rememberSaveable { mutableStateOf(listOf<Int>()) }
+    var editingFavorite by remember { mutableStateOf<FavoriteStation?>(null) }
+
+    val isSelectionMode = selectedFavoriteIds.isNotEmpty()
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var stationNameInput by rememberSaveable { mutableStateOf("") }
 
     val opts = listOf(0.7f, 0.75f)
+
+    //CÁLCULOS DA TELA PRINCIPAL
 
     val etanolDouble = valoretanol.replace(',', '.').toDoubleOrNull() ?: 0.0
     val gasolinaDouble = valorgasolina.replace(',', '.').toDoubleOrNull() ?: 0.0
@@ -121,6 +155,12 @@ fun EtanoOuGasolina_ExtendidoApp() {
     val razao = if (gasolinaDouble > 0) etanolDouble / gasolinaDouble else 0.0
     val recomend =
         if (gasolinaDouble > 0 && razao <= eficiencia) "Etanol" else "Gasolina"
+
+    val formatPercent = NumberFormat.getPercentInstance(Locale.getDefault())
+    val razaoFormat = formatPercent.format(razao)
+    val eficienciaFormat = formatPercent.format(eficiencia)
+
+    //LOCALIZAÇÃO
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -160,10 +200,18 @@ fun EtanoOuGasolina_ExtendidoApp() {
         }
     }
 
+    //LÓGICA PARA SALVAR FAVORITO
+
     val canSave = etanolDouble > 0.0 && gasolinaDouble > 0.0
+
 
     val onSaveFavorite: () -> Unit = onSaveFavorite@{
         if (!canSave) {
+            Toast.makeText(
+                context,
+                "Preencha os valores de Etanol e Gasolina antes de salvar.",
+                Toast.LENGTH_SHORT
+            ).show()
             return@onSaveFavorite
         }
 
@@ -176,9 +224,49 @@ fun EtanoOuGasolina_ExtendidoApp() {
         }
     }
 
-    val formatPercent = NumberFormat.getPercentInstance(Locale.getDefault())
-    val razaoFormat = formatPercent.format(razao)
-    val eficienciaFormat = formatPercent.format(eficiencia)
+
+    fun toggleFavoriteSelection(station: FavoriteStation) {
+        val id = station.id
+        selectedFavoriteIds = if (id in selectedFavoriteIds) {
+            selectedFavoriteIds - id
+        } else {
+            selectedFavoriteIds + id
+        }
+    }
+
+    fun handleFavoriteClick(station: FavoriteStation) {
+        if (isSelectionMode) {
+            toggleFavoriteSelection(station)
+        } else {
+            editingFavorite = station
+        }
+    }
+
+    fun handleFavoriteLongClick(station: FavoriteStation) {
+        toggleFavoriteSelection(station)
+    }
+
+    fun deleteSelectedFavorites() {
+        if (selectedFavoriteIds.isNotEmpty()) {
+            val idsToDelete = selectedFavoriteIds.toSet()
+            favorites = favorites.filterNot { it.id in idsToDelete }
+            selectedFavoriteIds = emptyList()
+        }
+    }
+    LaunchedEffect(eficiencia) {
+        prefs.edit {
+            putFloat(PREF_KEY_EFFICIENCY, eficiencia)
+        }
+    }
+
+    LaunchedEffect(favorites) {
+        val json = Json.encodeToString(favorites)
+        prefs.edit {
+            putString(PREF_KEY_FAVORITES, json)
+        }
+    }
+
+
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -200,7 +288,6 @@ fun EtanoOuGasolina_ExtendidoApp() {
             modifier = Modifier
                 .fillMaxSize()
         ) {
-
             when (currentDestination) {
                 AppDestinations.CALCULATOR -> {
                     Calculadora(
@@ -221,8 +308,12 @@ fun EtanoOuGasolina_ExtendidoApp() {
                 AppDestinations.FAVORITES -> {
                     FavoritesScreen(
                         favorites = favorites,
+                        selectedIds = selectedFavoriteIds,
+                        isSelectionMode = isSelectionMode,
+                        onCardClick = { station -> handleFavoriteClick(station) },
+                        onCardLongClick = { station -> handleFavoriteLongClick(station) },
+                        onDeleteSelected = { deleteSelectedFavorites() },
                         onOpenLocation = { station ->
-
                             val lat = station.latitude
                             val lon = station.longitude
 
@@ -287,6 +378,9 @@ fun EtanoOuGasolina_ExtendidoApp() {
                                         latitude = lastLocation?.latitude,
                                         longitude = lastLocation?.longitude
                                     )
+
+                                    valoretanol = ""
+                                    valorgasolina = ""
                                 }
                                 stationNameInput = ""
                                 showSaveDialog = false
@@ -307,9 +401,120 @@ fun EtanoOuGasolina_ExtendidoApp() {
                     }
                 )
             }
+
+            if (editingFavorite != null) {
+                val station = editingFavorite!!
+
+                var name by remember(station.id) { mutableStateOf(station.name) }
+                var etanolText by remember(station.id) {
+                    mutableStateOf(station.ethanolPrice.toString())
+                }
+                var gasolinaText by remember(station.id) {
+                    mutableStateOf(station.gasolinePrice.toString())
+                }
+                var localEfficiency by remember(station.id) {
+                    mutableFloatStateOf(station.efficiency)
+                }
+
+                AlertDialog(
+                    onDismissRequest = { editingFavorite = null },
+                    title = { Text("Editar posto") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { name = it },
+                                singleLine = true,
+                                label = { Text("Nome do posto") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = etanolText,
+                                onValueChange = { etanolText = it },
+                                singleLine = true,
+                                label = { Text("Valor do Etanol") },
+                                prefix = { Text("R$") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = gasolinaText,
+                                onValueChange = { gasolinaText = it },
+                                singleLine = true,
+                                label = { Text("Valor da Gasolina") },
+                                prefix = { Text("R$") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Critério de eficiência: ${(localEfficiency * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Switch(
+                                    checked = localEfficiency >= 0.75f,
+                                    onCheckedChange = { checked ->
+                                        localEfficiency = if (checked) 0.75f else 0.7f
+                                    }
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val etanol = etanolText.replace(',', '.').toDoubleOrNull()
+                                val gasolina = gasolinaText.replace(',', '.').toDoubleOrNull()
+
+                                if (etanol != null && gasolina != null && gasolina > 0.0) {
+                                    val newRatio = etanol / gasolina
+                                    val newRecommendation =
+                                        if (newRatio <= localEfficiency) "Etanol" else "Gasolina"
+
+                                    favorites = favorites.map {
+                                        if (it.id == station.id) {
+                                            it.copy(
+                                                name = name.ifBlank { station.name },
+                                                ethanolPrice = etanol,
+                                                gasolinePrice = gasolina,
+                                                efficiency = localEfficiency,
+                                                ratio = newRatio,
+                                                recommendation = newRecommendation
+                                            )
+                                        } else it
+                                    }
+                                    editingFavorite = null
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Valores inválidos para etanol/gasolina.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        ) {
+                            Text("Salvar")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { editingFavorite = null }) {
+                            Text("Cancelar")
+                        }
+                    }
+                )
+            }
+
         }
     }
 }
+
 
 
 
@@ -945,6 +1150,11 @@ fun CalculadoraLandscape(
 @Composable
 fun FavoritesScreen(
     favorites: List<FavoriteStation>,
+    selectedIds: List<Int>,
+    isSelectionMode: Boolean,
+    onCardClick: (FavoriteStation) -> Unit,
+    onCardLongClick: (FavoriteStation) -> Unit,
+    onDeleteSelected: () -> Unit,
     onOpenLocation: (FavoriteStation) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -958,42 +1168,88 @@ fun FavoritesScreen(
             Text(
                 text = "Nenhum posto salvo ainda.\nUse o botão \"Salvar Posto\" na calculadora.",
                 textAlign = TextAlign.Center,
-                modifier = modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             )
         }
     } else {
-        LazyColumn(
+        Column(
             modifier = modifier
-                .fillMaxWidth()
-                .padding(8.dp , 28.dp, 8.dp , 28.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
         ) {
-            items(favorites, key = { it.id }) { favorite ->
-                FavoriteStationCard(
-                    favorite = favorite,
-                    onOpenLocation = { onOpenLocation(favorite) }
-                )
+            if (isSelectionMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${selectedIds.size} selecionado(s)",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    IconButton(onClick = onDeleteSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Apagar selecionados"
+                        )
+                    }
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp, 28.dp, 8.dp, 28.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(favorites, key = { it.id }) { favorite ->
+                    FavoriteStationCard(
+                        favorite = favorite,
+                        selected = favorite.id in selectedIds,
+                        onClick = { onCardClick(favorite) },
+                        onLongClick = { onCardLongClick(favorite) },
+                        onOpenLocation = { onOpenLocation(favorite) }
+                    )
+                }
             }
         }
     }
 }
 
 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FavoriteStationCard(
     favorite: FavoriteStation,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onOpenLocation: (FavoriteStation) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault())
     val percentFormat = NumberFormat.getPercentInstance(Locale.getDefault())
 
+    val colors = if (selected) {
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    } else {
+        CardDefaults.cardColors()
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = colors
     ) {
         Column(
             modifier = Modifier
@@ -1069,6 +1325,7 @@ fun FavoriteStationCard(
                     )
                 }
             }
+
             if (favorite.latitude != null && favorite.longitude != null) {
                 Row(
                     modifier = Modifier
@@ -1076,9 +1333,9 @@ fun FavoriteStationCard(
                         .padding(top = 4.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    androidx.compose.material3.FilledTonalButton(
+                    FilledTonalButton(
                         onClick = { onOpenLocation(favorite) },
-                        modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(999.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                     ) {
@@ -1098,3 +1355,7 @@ fun FavoriteStationCard(
         }
     }
 }
+
+private const val PREFS_NAME = "etano_ou_gasolina_prefs"
+private const val PREF_KEY_FAVORITES = "favorites_json"
+private const val PREF_KEY_EFFICIENCY = "efficiency"
