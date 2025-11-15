@@ -134,7 +134,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
         )
     }
 
-    var favorites by rememberSaveable {
+    var favorites by remember {
         mutableStateOf(
             prefs.getString(PREF_KEY_FAVORITES, null)?.let { json ->
                 runCatching {
@@ -143,7 +143,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
             } ?: emptyList()
         )
     }
-    var selectedFavoriteIds by rememberSaveable { mutableStateOf(listOf<Int>()) }
+    var selectedFavoriteIds by remember { mutableStateOf(listOf<Int>()) }
     var editingFavorite by remember { mutableStateOf<FavoriteStation?>(null) }
 
     val isSelectionMode = selectedFavoriteIds.isNotEmpty()
