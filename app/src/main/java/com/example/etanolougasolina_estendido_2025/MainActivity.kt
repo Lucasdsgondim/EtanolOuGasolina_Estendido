@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
         hideSystemNavigationBar()
         setContent {
             EtanolOuGasolina_EstendidoTheme {
-                EtanolOuGasolina_ExtendidoApp()
+                EtanolOuGasolina_EstendidoApp()
             }
         }
     }
@@ -114,9 +114,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private const val PREFS_NAME = "etano_ou_gasolina_prefs" //Nome do Arquivo de SharedPreferences
+private const val PREF_KEY_FAVORITES = "favorites_json" //Key dos favoritos
+private const val PREF_KEY_EFFICIENCY = "efficiency" //Key da eficiência
+
 @PreviewScreenSizes
 @Composable
-fun EtanolOuGasolina_ExtendidoApp() {
+fun EtanolOuGasolina_EstendidoApp() {
     val context = LocalContext.current
     val prefs = remember {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -132,7 +136,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
         mutableFloatStateOf(
             prefs.getFloat(PREF_KEY_EFFICIENCY, 0.7f)
         )
-    }
+    } //Lê a eficiência salva
 
     var favorites by remember {
         mutableStateOf(
@@ -142,38 +146,44 @@ fun EtanolOuGasolina_ExtendidoApp() {
                 }.getOrElse { emptyList() }
             } ?: emptyList()
         )
-    }
-    var selectedFavoriteIds by remember { mutableStateOf(listOf<Int>()) }
-    var editingFavorite by remember { mutableStateOf<FavoriteStation?>(null) }
+    } //Lê os favoritos salvos
+    var selectedFavoriteIds by remember { mutableStateOf(listOf<Int>()) } //Favoritos selecionados
+    var editingFavorite by remember { mutableStateOf<FavoriteStation?>(null) } //Favorito selecionado para edição
 
-    val isSelectionMode = selectedFavoriteIds.isNotEmpty()
 
-    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
-    var stationNameInput by rememberSaveable { mutableStateOf("") }
+    val isSelectionMode = selectedFavoriteIds.isNotEmpty() //Modo de seleção de favoritos
 
-    val opts = listOf(0.7f, 0.75f)
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) } //Visibilidade da caixa de salvamento
+    var stationNameInput by rememberSaveable { mutableStateOf("") } //Campo de nome do posto p/ salvamento
+
+    val opts = listOf(0.7f, 0.75f) //Opções de eficiência
+
 
     // CÁLCULOS DA TELA PRINCIPAL
 
-    val etanolDouble = valoretanol.replace(',', '.').toDoubleOrNull() ?: 0.0
-    val gasolinaDouble = valorgasolina.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val etanolDouble = valoretanol.replace(',', '.').toDoubleOrNull() ?: 0.0 //Converte o valor do etanol para double
+    val gasolinaDouble = valorgasolina.replace(',', '.').toDoubleOrNull() ?: 0.0 //Converte o valor da gasolina para double
 
-    val razao = if (gasolinaDouble > 0) etanolDouble / gasolinaDouble else 0.0
+    val razao = if (gasolinaDouble > 0) etanolDouble / gasolinaDouble else 0.0 //Calcula a razão entre o etanol e a gasolina
     val recomend = if (gasolinaDouble > 0 && razao <= eficiencia) {
         stringResource(R.string.recommendation_ethanol)
     } else {
         stringResource(R.string.recommendation_gasoline)
-    }
+    } //Recomendação de qual combustível usar
 
-    val formatPercent = NumberFormat.getPercentInstance(Locale.getDefault())
-    val razaoFormat = formatPercent.format(razao)
-    val eficienciaFormat = formatPercent.format(eficiencia)
+
+    val formatPercent = NumberFormat.getPercentInstance(Locale.getDefault()) //Lê a formatação de percentual padrão do dispositivo
+    val razaoFormat = formatPercent.format(razao) //Formata a razão
+    val eficienciaFormat = formatPercent.format(eficiencia) //Formata a eficiência
+
+
 
     // LOCALIZAÇÃO
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
-    }
+    } //Instância do serviço de localização do dispositivo
+
 
     var hasLocationPermission by rememberSaveable {
         mutableStateOf(
@@ -182,9 +192,9 @@ fun EtanolOuGasolina_ExtendidoApp() {
                 FINE_LOCATION_PERMISSION
             ) == PackageManager.PERMISSION_GRANTED
         )
-    }
+    } //Lê se há permissão de localização
 
-    var lastLocation by remember { mutableStateOf<Location?>(null) }
+    var lastLocation by remember { mutableStateOf<Location?>(null) } //Lê a ultima localização do dispositivo
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -211,7 +221,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
 
     // LÓGICA PARA SALVAR FAVORITO
 
-    val canSave = etanolDouble > 0.0 && gasolinaDouble > 0.0
+    val canSave = etanolDouble > 0.0 && gasolinaDouble > 0.0 //Verifica se o usuário digitou valores válidos
 
     val onSaveFavorite: () -> Unit = onSaveFavorite@{
         if (!canSave) {
@@ -221,7 +231,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
                 Toast.LENGTH_SHORT
             ).show()
             return@onSaveFavorite
-        }
+        } //Se não tiver valores válidos, não salva e mostra uma mensagem de erro
 
         if (!hasLocationPermission) {
             locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION)
@@ -230,7 +240,10 @@ fun EtanolOuGasolina_ExtendidoApp() {
             stationNameInput = context.getString(R.string.station_default_name, nextId)
             showSaveDialog = true
         }
-    }
+    } //Se não tiver permissão para acessar a localização, solicita a permissão e salva o favorito
+
+
+    // LÓGICA PARA EDIÇÃO/EXCLUSÃO DE FAVORITOS
 
     fun toggleFavoriteSelection(station: FavoriteStation) {
         val id = station.id
@@ -239,7 +252,7 @@ fun EtanolOuGasolina_ExtendidoApp() {
         } else {
             selectedFavoriteIds + id
         }
-    }
+    } //Adiciona ou remove um favorito da lista de favoritos selecionados
 
     fun handleFavoriteClick(station: FavoriteStation) {
         if (isSelectionMode) {
@@ -247,11 +260,12 @@ fun EtanolOuGasolina_ExtendidoApp() {
         } else {
             editingFavorite = station
         }
-    }
+    } //Se estiver em modo de seleção, adiciona ou remove um favorito da lista de favoritos selecionados. Caso contrário, abre a tela de edição do favorito.
+
 
     fun handleFavoriteLongClick(station: FavoriteStation) {
         toggleFavoriteSelection(station)
-    }
+    }//Se clicar e segurar no card de um favorito, adiciona ele à lista de favoritos selecionados e entra no modo de seleção.
 
     fun deleteSelectedFavorites() {
         if (selectedFavoriteIds.isNotEmpty()) {
@@ -259,20 +273,25 @@ fun EtanolOuGasolina_ExtendidoApp() {
             favorites = favorites.filterNot { it.id in idsToDelete }
             selectedFavoriteIds = emptyList()
         }
-    }
+    } //Deleta os favoritos selecionados
+
+    // LÓGICA PARA O APP LER AS CONFIGURAÇÕES SALVAS (LISTA DE FAVORITOS E ESCOLHA DO CRITÉRIO DE EFICIÊNCIA)
 
     LaunchedEffect(eficiencia) {
         prefs.edit {
             putFloat(PREF_KEY_EFFICIENCY, eficiencia)
         }
-    }
+    } //Salva a eficiência no SharedPreferences
 
     LaunchedEffect(favorites) {
         val json = Json.encodeToString(favorites)
         prefs.edit {
             putString(PREF_KEY_FAVORITES, json)
         }
-    }
+    } //Salva os favoritos no SharedPreferences
+
+
+    // NAVEGAÇÃO DO APP
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -1447,6 +1466,4 @@ fun FavoriteStationCard(
 }
 
 
-private const val PREFS_NAME = "etano_ou_gasolina_prefs"
-private const val PREF_KEY_FAVORITES = "favorites_json"
-private const val PREF_KEY_EFFICIENCY = "efficiency"
+
