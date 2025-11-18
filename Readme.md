@@ -919,3 +919,81 @@ Além dos pontos pedidos, o projeto traz:
   Exemplos: tentar salvar sem valores, localização indisponível, erro ao abrir app de mapas, valores inválidos na edição.
 
 ---
+## 0. Configurações de Gradle e Manifest necessárias
+
+Antes das funcionalidades descritas nas seções seguintes funcionarem (SharedPreferences com JSON, localização, navegação adaptativa etc.), é preciso garantir algumas configurações no Gradle e no `AndroidManifest`.
+
+### 0.1. Plugins e dependências do módulo `app`
+
+No arquivo `app/build.gradle.kts`, além dos plugins padrão de Android/Compose, o projeto utiliza:
+
+```kotlin
+plugins {
+    // ...
+    alias(libs.plugins.kotlinSerialization) // para @Serializable e JSON
+}
+```
+
+E, nas dependências, os pontos mais importantes para as soluções descritas no README são:
+
+```kotlin
+dependencies {
+    // Compose + Material 3 (UI, NavigationSuite, ícones estendidos)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
+    implementation(libs.androidx.compose.foundation)
+
+    // Serialização em JSON dos favoritos (SharedPreferences)
+    implementation(libs.kotlinx.serialization.json)
+
+    // Localização (FusedLocationProviderClient)
+    implementation(libs.play.services.location)
+
+    // Integração de ViewModel com Compose, quando necessário
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+}
+```
+
+Sem esses itens, o código mostrado nas seções de CRUD com JSON, localização e navegação adaptativa não compila.
+
+### 0.2. Permissões e configurações do `AndroidManifest.xml`
+
+No arquivo `app/src/main/AndroidManifest.xml`, o projeto adiciona as permissões de localização usadas pela solução de “Acesso à localização do usuário e exibição do mapa”:
+
+```xml
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+```
+
+Ainda no mesmo arquivo, a activity principal é registrada com o tema do app e o filtro de lançamento:
+
+```xml
+<application
+    android:icon="@mipmap/ic_etanolvsgasolina"
+    android:roundIcon="@mipmap/ic_etanolvsgasolina_round"
+    android:label="@string/app_name"
+    android:theme="@style/Theme.EtanolOuGasolina_Estendido">
+
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:theme="@style/Theme.EtanolOuGasolina_Estendido">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+    </activity>
+</application>
+```
+
+Essas permissões e configurações são necessárias para que:
+- o app consiga solicitar a localização atual do usuário e salvar latitude/longitude junto com o posto;
+- a aplicação use o tema correto e seja exibida normalmente na grade de apps (ícone, rótulo, activity principal).
+
+---
+
+ 
+## 1. Salvar e restaurar o estado da eficiǦncia (70% / 75%)
