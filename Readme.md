@@ -82,7 +82,7 @@ Embora o enunciado fale em um *Switch* para alternar entre 70% e 75%, o projeto 
 Em `MainActivity.kt`, o app cria/acessa o arquivo de `SharedPreferences` e lê a eficiência salva usando uma chave específica:
 
 ```kotlin
-private const val PREFS_NAME = "etano_ou_gasolina_prefs"
+private const val PREFS_NAME = "etanol_ou_gasolina_prefs"
 private const val PREF_KEY_EFFICIENCY = "efficiency"
 
 @Composable
