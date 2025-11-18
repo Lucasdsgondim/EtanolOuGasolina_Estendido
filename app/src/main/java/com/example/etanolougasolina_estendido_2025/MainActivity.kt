@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
     } //Função para ocultar a barra de navegação
 }
 
-private const val PREFS_NAME = "etano_ou_gasolina_prefs" //Nome do Arquivo de SharedPreferences
+private const val PREFS_NAME = "etanol_ou_gasolina_prefs" //Nome do Arquivo de SharedPreferences
 private const val PREF_KEY_FAVORITES = "favorites_json" //Key dos favoritos
 private const val PREF_KEY_EFFICIENCY = "efficiency" //Key da eficiência
 
