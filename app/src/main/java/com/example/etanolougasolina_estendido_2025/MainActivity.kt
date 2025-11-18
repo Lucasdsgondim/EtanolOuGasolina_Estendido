@@ -95,7 +95,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-
+import java.text.DecimalFormatSymbols
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -120,20 +120,26 @@ private const val PREFS_NAME = "etano_ou_gasolina_prefs" //Nome do Arquivo de Sh
 private const val PREF_KEY_FAVORITES = "favorites_json" //Key dos favoritos
 private const val PREF_KEY_EFFICIENCY = "efficiency" //Key da eficiência
 
-class CurrencyVisualTransformation : VisualTransformation {
+class CurrencyVisualTransformation(
+    private val locale: Locale = Locale.getDefault()
+) : VisualTransformation {
+
+    private val decimalSeparator =
+        DecimalFormatSymbols.getInstance(locale).decimalSeparator
+
     override fun filter(text: AnnotatedString): TransformedText {
         val digits = text.text.filter { it.isDigit() }
 
         val number = digits.toLongOrNull() ?: 0L
         val cents = (number % 100).toInt()
-        val reais = number / 100
+        val units = number / 100
 
         val formatted = if (digits.isEmpty()) {
-            "" // campo vazio
-        } else if (reais > 0) {
-            "%d,%02d".format(reais, cents)
+            "0${decimalSeparator}00"
+        } else if (units > 0) {
+            "%d$decimalSeparator%02d".format(units, cents)
         } else {
-            "0,%02d".format(cents)
+            "0$decimalSeparator%02d".format(cents)
         }
 
         val transformed = AnnotatedString(formatted)
@@ -141,15 +147,8 @@ class CurrencyVisualTransformation : VisualTransformation {
         val transformedLength = transformed.length
 
         val offsetMapping = object : OffsetMapping {
-            // Sempre joga o cursor pro fim do texto transformado
-            override fun originalToTransformed(offset: Int): Int {
-                return transformedLength
-            }
-
-            // E pro fim do texto original (digits)
-            override fun transformedToOriginal(offset: Int): Int {
-                return originalLength
-            }
+            override fun originalToTransformed(offset: Int) = transformedLength
+            override fun transformedToOriginal(offset: Int) = originalLength
         }
 
         return TransformedText(transformed, offsetMapping)
