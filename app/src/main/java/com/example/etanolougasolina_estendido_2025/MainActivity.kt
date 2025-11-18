@@ -121,7 +121,7 @@ private const val PREF_KEY_FAVORITES = "favorites_json" //Key dos favoritos
 private const val PREF_KEY_EFFICIENCY = "efficiency" //Key da eficiência
 
 class CurrencyVisualTransformation(
-    private val locale: Locale = Locale.getDefault()
+    locale: Locale = Locale.getDefault()
 ) : VisualTransformation {
 
     private val decimalSeparator =
