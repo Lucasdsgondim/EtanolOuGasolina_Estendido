@@ -240,7 +240,8 @@ fun EtanolOuGasolina_EstendidoApp() {
             stationNameInput = context.getString(R.string.station_default_name, nextId)
             showSaveDialog = true
         }
-    } //Se não tiver permissão para acessar a localização, solicita a permissão e salva o favorito
+    } //Se não tiver permissão para acessar a localização, solicita a permissão e salva o favorito.
+    //Se tiver a permissão, o dialogo de salvamento é aberto.
 
 
     // LÓGICA PARA EDIÇÃO/EXCLUSÃO DE FAVORITOS
@@ -389,7 +390,7 @@ fun EtanolOuGasolina_EstendidoApp() {
                         TextButton(
                             onClick = {
                                 if (canSave) {
-                                    val nextId = favorites.size + 1
+                                    val nextId = (favorites.maxOfOrNull { it.id } ?: 0) + 1
                                     val finalName =
                                         stationNameInput.ifBlank {
                                             context.getString(
@@ -1464,6 +1465,3 @@ fun FavoriteStationCard(
         }
     }
 }
-
-
-
