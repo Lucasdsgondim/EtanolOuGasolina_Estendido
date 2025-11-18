@@ -91,32 +91,70 @@ import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import java.text.DateFormat
 import java.util.Date
-
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        hideSystemNavigationBar()
+        hideSystemStatusBar()
         setContent {
             EtanolOuGasolina_EstendidoTheme {
                 EtanolOuGasolina_EstendidoApp()
             }
         }
     }
-
-    private fun hideSystemNavigationBar() {
+    private fun hideSystemStatusBar() {
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controller.hide(WindowInsetsCompat.Type.statusBars())
-    }
+    } //Função para ocultar a barra de navegação
 }
 
 private const val PREFS_NAME = "etano_ou_gasolina_prefs" //Nome do Arquivo de SharedPreferences
 private const val PREF_KEY_FAVORITES = "favorites_json" //Key dos favoritos
 private const val PREF_KEY_EFFICIENCY = "efficiency" //Key da eficiência
+
+class CurrencyVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digits = text.text.filter { it.isDigit() }
+
+        val number = digits.toLongOrNull() ?: 0L
+        val cents = (number % 100).toInt()
+        val reais = number / 100
+
+        val formatted = if (digits.isEmpty()) {
+            "" // campo vazio
+        } else if (reais > 0) {
+            "%d,%02d".format(reais, cents)
+        } else {
+            "0,%02d".format(cents)
+        }
+
+        val transformed = AnnotatedString(formatted)
+        val originalLength = digits.length
+        val transformedLength = transformed.length
+
+        val offsetMapping = object : OffsetMapping {
+            // Sempre joga o cursor pro fim do texto transformado
+            override fun originalToTransformed(offset: Int): Int {
+                return transformedLength
+            }
+
+            // E pro fim do texto original (digits)
+            override fun transformedToOriginal(offset: Int): Int {
+                return originalLength
+            }
+        }
+
+        return TransformedText(transformed, offsetMapping)
+    }
+}//Função para evitar que o usuário precise digitar o valor com vírgula
 
 @PreviewScreenSizes
 @Composable
@@ -161,8 +199,8 @@ fun EtanolOuGasolina_EstendidoApp() {
 
     // CÁLCULOS DA TELA PRINCIPAL
 
-    val etanolDouble = valoretanol.replace(',', '.').toDoubleOrNull() ?: 0.0 //Converte o valor do etanol para double
-    val gasolinaDouble = valorgasolina.replace(',', '.').toDoubleOrNull() ?: 0.0 //Converte o valor da gasolina para double
+    val etanolDouble = valoretanol.toLongOrNull()?.div(100.0) ?: 0.0
+    val gasolinaDouble = valorgasolina.toLongOrNull()?.div(100.0) ?: 0.0
 
     val razao = if (gasolinaDouble > 0) etanolDouble / gasolinaDouble else 0.0 //Calcula a razão entre o etanol e a gasolina
     val recomend = if (gasolinaDouble > 0 && razao <= eficiencia) {
@@ -440,10 +478,10 @@ fun EtanolOuGasolina_EstendidoApp() {
 
                 var name by remember(station.id) { mutableStateOf(station.name) }
                 var etanolText by remember(station.id) {
-                    mutableStateOf(station.ethanolPrice.toString())
+                    mutableStateOf(((station.ethanolPrice * 100).toInt()).toString())
                 }
                 var gasolinaText by remember(station.id) {
-                    mutableStateOf(station.gasolinePrice.toString())
+                    mutableStateOf(((station.gasolinePrice * 100).toInt()).toString())
                 }
                 var localEfficiency by remember(station.id) {
                     mutableFloatStateOf(station.efficiency)
@@ -471,7 +509,9 @@ fun EtanolOuGasolina_EstendidoApp() {
                             )
                             OutlinedTextField(
                                 value = etanolText,
-                                onValueChange = { etanolText = it },
+                                onValueChange = { newText ->
+                                    etanolText = newText.filter { it.isDigit() }
+                                },
                                 singleLine = true,
                                 label = {
                                     Text(
@@ -490,11 +530,14 @@ fun EtanolOuGasolina_EstendidoApp() {
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Number
                                 ),
+                                visualTransformation = CurrencyVisualTransformation(),
                                 modifier = Modifier.fillMaxWidth()
                             )
                             OutlinedTextField(
                                 value = gasolinaText,
-                                onValueChange = { gasolinaText = it },
+                                onValueChange = { newText ->
+                                    gasolinaText = newText.filter { it.isDigit() }
+                                },
                                 singleLine = true,
                                 label = {
                                     Text(
@@ -513,6 +556,7 @@ fun EtanolOuGasolina_EstendidoApp() {
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Number
                                 ),
+                                visualTransformation = CurrencyVisualTransformation(),
                                 modifier = Modifier.fillMaxWidth()
                             )
 
@@ -543,10 +587,8 @@ fun EtanolOuGasolina_EstendidoApp() {
                     confirmButton = {
                         TextButton(
                             onClick = {
-                                val etanol =
-                                    etanolText.replace(',', '.').toDoubleOrNull()
-                                val gasolina =
-                                    gasolinaText.replace(',', '.').toDoubleOrNull()
+                                val etanol = etanolText.toLongOrNull()?.div(100.0)
+                                val gasolina = gasolinaText.toLongOrNull()?.div(100.0)
 
                                 if (etanol != null && gasolina != null && gasolina > 0.0) {
                                     val newRatio = etanol / gasolina
@@ -722,7 +764,9 @@ fun CalculadoraPortrait(
 
                 OutlinedTextField(
                     value = valoretanol,
-                    onValueChange = { onValoretanolChange(it) },
+                    onValueChange = { newText ->
+                        onValoretanolChange(newText.filter { it.isDigit() })
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1.15f),
@@ -730,7 +774,8 @@ fun CalculadoraPortrait(
                     shape = RoundedCornerShape(16.dp),
                     label = { Text(stringResource(R.string.ethanol_value_label)) },
                     prefix = { Text(stringResource(R.string.currency_symbol)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = CurrencyVisualTransformation()
                 )
 
                 Spacer(modifier = Modifier.weight(.1f))
@@ -745,7 +790,9 @@ fun CalculadoraPortrait(
 
                 OutlinedTextField(
                     value = valorgasolina,
-                    onValueChange = { onValorgasolinaChange(it) },
+                    onValueChange = { newText ->
+                        onValorgasolinaChange(newText.filter { it.isDigit() })
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1.15f),
@@ -753,7 +800,8 @@ fun CalculadoraPortrait(
                     shape = RoundedCornerShape(16.dp),
                     label = { Text(stringResource(R.string.gasoline_value_label)) },
                     prefix = { Text(stringResource(R.string.currency_symbol)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = CurrencyVisualTransformation()
                 )
                 Spacer(modifier = Modifier.weight(.1f))
 
@@ -999,13 +1047,16 @@ fun CalculadoraLandscape(
                     )
                     TextField(
                         value = valoretanol,
-                        onValueChange = { onValoretanolChange(it) },
+                        onValueChange = { newText ->
+                            onValoretanolChange(newText.filter { it.isDigit() })
+                        },
                         modifier = Modifier
                             .weight(1.75f),
                         singleLine = true,
                         label = { Text(stringResource(R.string.ethanol_value_label)) },
                         prefix = { Text(stringResource(R.string.currency_symbol)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        visualTransformation = CurrencyVisualTransformation()
                     )
                 }
                 Row(
@@ -1025,13 +1076,16 @@ fun CalculadoraLandscape(
 
                     TextField(
                         value = valorgasolina,
-                        onValueChange = { onValorgasolinaChange(it) },
+                        onValueChange = { newText ->
+                            onValorgasolinaChange(newText.filter { it.isDigit() })
+                        },
                         modifier = Modifier
                             .weight(1.75f),
                         singleLine = true,
                         label = { Text(stringResource(R.string.gasoline_value_label)) },
                         prefix = { Text(stringResource(R.string.currency_symbol)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        visualTransformation = CurrencyVisualTransformation()
                     )
                 }
 
