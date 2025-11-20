@@ -1,3 +1,4 @@
+# Atenção: Essa branch é uma versão demo, que adiciona favoritos predefinidos ao inicializar o app.
 ## 0. Configurações de Gradle e Manifest necessárias
 
 Antes das funcionalidades descritas nas seções seguintes funcionarem (SharedPreferences com JSON, localização, navegação adaptativa etc.), é preciso garantir algumas configurações no Gradle e no `AndroidManifest`.
