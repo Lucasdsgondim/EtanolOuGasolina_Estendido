@@ -96,6 +96,8 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import java.text.DecimalFormatSymbols
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,6 +117,48 @@ class MainActivity : ComponentActivity() {
         controller.hide(WindowInsetsCompat.Type.statusBars())
     } //Função para ocultar a barra de navegação
 }
+
+//Função para injetar postos demonstrativos
+private fun presetStation(
+    context: Context,
+    id: Int,
+    name: String,
+    ethanol: Double,
+    gasoline: Double,
+    efficiency: Float,
+    lat: Double? = null,
+    lon: Double? = null
+): FavoriteStation {
+    val ratio = if (gasoline > 0) ethanol / gasoline else 0.0
+    val recommendation = if (ratio <= efficiency) {
+        context.getString(R.string.recommendation_ethanol)
+    } else {
+        context.getString(R.string.recommendation_gasoline)
+    }
+    return FavoriteStation(
+        id = id,
+        name = name,
+        ethanolPrice = ethanol,
+        gasolinePrice = gasoline,
+        efficiency = efficiency,
+        ratio = ratio,
+        recommendation = recommendation,
+        latitude = lat,
+        longitude = lon,
+        createdAt = System.currentTimeMillis()
+    )
+}
+
+private fun demoFavorites(context: Context) = listOf(
+    presetStation(context, 1, "Posto Beira Mar", 4.19, 5.99, 0.7f, -3.7225, -38.4917),
+    presetStation(context, 2, "Posto Aldeota", 4.29, 6.09, 0.7f, -3.7390, -38.5035),
+    presetStation(context, 3, "Posto Messejana", 4.05, 5.85, 0.7f, -3.8292, -38.4879),
+    presetStation(context, 4, "Posto Parangaba", 4.15, 5.95, 0.75f, -3.7928, -38.5607),
+    presetStation(context, 5, "Posto Aeroporto", 4.35, 6.19, 0.75f, -3.7763, -38.5325)
+)
+
+//Fim da função para injetar os postos demonstrativos
+
 
 private const val PREFS_NAME = "etanol_ou_gasolina_prefs" //Nome do Arquivo de SharedPreferences
 private const val PREF_KEY_FAVORITES = "favorites_json" //Key dos favoritos
@@ -184,6 +228,18 @@ fun EtanolOuGasolina_EstendidoApp() {
             } ?: emptyList()
         )
     } //Lê os favoritos salvos
+
+    //Injeção dos presets para demonstação
+    val presets = remember(context) { demoFavorites(context) }
+
+    LaunchedEffect(Unit) {
+        val hasSavedFavorites = prefs.contains(PREF_KEY_FAVORITES)
+        if (!hasSavedFavorites && favorites.isEmpty()) {
+            favorites = presets   // preenche só na primeira execução
+        }
+    }
+    // Fim da injeção dos presets para demonstração
+
     var selectedFavoriteIds by remember { mutableStateOf(listOf<Int>()) } //Favoritos selecionados
     var editingFavorite by remember { mutableStateOf<FavoriteStation?>(null) } //Favorito selecionado para edição
 
@@ -231,16 +287,24 @@ fun EtanolOuGasolina_EstendidoApp() {
         )
     } //Lê se há permissão de localização
 
-    var lastLocation by remember { mutableStateOf<Location?>(null) } //Lê a ultima localização do dispositivo
+    val requestCurrentLocation: (onReady: (Location?) -> Unit) -> Unit = { onReady ->
+        val token = CancellationTokenSource() //Cancela se o escopo morrer; garante chamada unica
+        fusedLocationClient
+            .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, token.token)
+            .addOnSuccessListener { onReady(it) } //Retorna a localizacao mais recente disponivel
+            .addOnFailureListener { onReady(null) } //Em erro, devolve null para fallback na ultima conhecida
+    } //Funcao para obter a localizacao atual no momento da acao
+
+    var lastLocation by remember { mutableStateOf<Location?>(null) } //Le a ultima localizacao conhecida do dispositivo
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasLocationPermission = isGranted
         if (isGranted) {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            requestCurrentLocation { location ->
                 if (location != null) {
-                    lastLocation = location
+                    lastLocation = location // atualiza assim que a permissão é dada
                 }
             }
         }
@@ -268,17 +332,20 @@ fun EtanolOuGasolina_EstendidoApp() {
                 Toast.LENGTH_SHORT
             ).show()
             return@onSaveFavorite
-        } //Se não tiver valores válidos, não salva e mostra uma mensagem de erro
+        } //Se nao houver valores validos, nao salva e mostra erro
 
         if (!hasLocationPermission) {
-            locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION)
-        } else {
+            locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION) //Pede permissão antes de buscar a localização
+            return@onSaveFavorite //Sai; quando a permissão for dada, tente salvar de novo
+        }
+
+        requestCurrentLocation { location ->
+            lastLocation = location ?: lastLocation //Usa a posição atual; se falhar, mantém a última conhecida
             val nextId = favorites.size + 1
             stationNameInput = context.getString(R.string.station_default_name, nextId)
-            showSaveDialog = true
+            showSaveDialog = true //Só abre o diálogo após tentar obter a localização mais recente
         }
-    } //Se não tiver permissão para acessar a localização, solicita a permissão e salva o favorito.
-    //Se tiver a permissão, o dialogo de salvamento é aberto.
+    } //Fluxo de salvamento: valida valores, garante permissão e busca a localização atual antes de abrir o diálogo
 
 
     // LÓGICA PARA EDIÇÃO/EXCLUSÃO DE FAVORITOS
@@ -1518,3 +1585,7 @@ fun FavoriteStationCard(
         }
     }
 }
+
+
+
+

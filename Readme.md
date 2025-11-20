@@ -611,77 +611,78 @@ Não há limite explícito de 10 postos; o app permite lista livre (conforme alt
 
 O app:
 - pede permissão de localização em tempo de execução;
-- busca a última localização conhecida;
+- tenta obter a localização atual com `getCurrentLocation` (alta precisão) e, em caso de falha, usa a última localização conhecida (`lastLocation`);
 - salva latitude/longitude junto com os dados do posto;
-- abre um Intent de mapa ao clicar em “Abrir localização” no card do posto.
+- abre um Intent de mapa ao clicar em "Abrir localização" no card do posto.
 
 ### Permissão e captura da última localização
 
-Logo após criar o `fusedLocationClient`, o app controla o estado da permissão:
+Logo após criar o `fusedLocationClient`, o app controla o estado da permissão e define uma função para buscar a localização atual:
 
-```kotlin
-val fusedLocationClient = remember {
-    LocationServices.getFusedLocationProviderClient(context)
-}
+  ```kotlin
+  val fusedLocationClient = remember {
+      LocationServices.getFusedLocationProviderClient(context)
+  }
 
-var hasLocationPermission by rememberSaveable {
-    mutableStateOf(
-        ContextCompat.checkSelfPermission(
-            context,
-            FINE_LOCATION_PERMISSION
-        ) == PackageManager.PERMISSION_GRANTED
-    )
-}
+  var hasLocationPermission by rememberSaveable {
+      mutableStateOf(
+          ContextCompat.checkSelfPermission(
+              context,
+              FINE_LOCATION_PERMISSION
+          ) == PackageManager.PERMISSION_GRANTED
+      )
+  }
 
-var lastLocation by remember { mutableStateOf<Location?>(null) }
+  val requestCurrentLocation: (onReady: (Location?) -> Unit) -> Unit = { onReady ->
+      val token = CancellationTokenSource()
+      fusedLocationClient
+          .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, token.token)
+          .addOnSuccessListener { onReady(it) }
+          .addOnFailureListener { onReady(null) }
+  }
 
-val locationPermissionLauncher = rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.RequestPermission()
-) { isGranted ->
-    hasLocationPermission = isGranted
-    if (isGranted) {
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                lastLocation = location
-            }
-        }
-    }
-}
+  var lastLocation by remember { mutableStateOf<Location?>(null) }
+
+  val locationPermissionLauncher = rememberLauncherForActivityResult(
+      contract = ActivityResultContracts.RequestPermission()
+  ) { isGranted ->
+      hasLocationPermission = isGranted
+      if (isGranted) {
+          requestCurrentLocation { location ->
+              if (location != null) {
+                  lastLocation = location
+              }
+          }
+      }
+  }
 ```
+  E ainda um LaunchedEffect para buscar localização assim que a permissão estiver concedida:
 
-E ainda um `LaunchedEffect` para buscar localização assim que a permissão estiver concedida:
 
+  ### Integração com o fluxo de salvamento do posto
+
+  Ao salvar um posto, a lógica checa primeiro se os valores são válidos, depois a permissão de localização e, em seguida, tenta obter a localização atual:
 ```kotlin
-LaunchedEffect(hasLocationPermission) {
-    if (hasLocationPermission) {
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                lastLocation = location
-            }
-        }
-    }
-}
-```
+  val onSaveFavorite: () -> Unit = onSaveFavorite@{
+              context,
+              context.getString(R.string.error_fill_values_before_saving),
+              Toast.LENGTH_SHORT
+          ).show()
+          return@onSaveFavorite
+      }
 
-### Integração com o fluxo de salvamento do posto
+      if (!hasLocationPermission) {
+          locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION)
+          return@onSaveFavorite
+      }
 
-Ao salvar um posto, a lógica checa primeiro se os valores são válidos, depois a permissão de localização:
-
-```kotlin
-val onSaveFavorite: () -> Unit = onSaveFavorite@{
-    if (!canSave) {
-        // mostra Toast de erro
-        return@onSaveFavorite
-    }
-
-    if (!hasLocationPermission) {
-        locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION)
-    } else {
-        val nextId = favorites.size + 1
-        stationNameInput = context.getString(R.string.station_default_name, nextId)
-        showSaveDialog = true
-    }
-}
+      requestCurrentLocation { location ->
+          lastLocation = location ?: lastLocation
+          val nextId = favorites.size + 1
+          stationNameInput = context.getString(R.string.station_default_name, nextId)
+          showSaveDialog = true
+      }
+  }
 ```
 
 Quando o usuário confirma o diálogo de salvar, a localização é associada ao registro:
