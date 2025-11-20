@@ -96,6 +96,8 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import java.text.DecimalFormatSymbols
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -184,6 +186,7 @@ fun EtanolOuGasolina_EstendidoApp() {
             } ?: emptyList()
         )
     } //Lê os favoritos salvos
+
     var selectedFavoriteIds by remember { mutableStateOf(listOf<Int>()) } //Favoritos selecionados
     var editingFavorite by remember { mutableStateOf<FavoriteStation?>(null) } //Favorito selecionado para edição
 
@@ -231,16 +234,24 @@ fun EtanolOuGasolina_EstendidoApp() {
         )
     } //Lê se há permissão de localização
 
-    var lastLocation by remember { mutableStateOf<Location?>(null) } //Lê a ultima localização do dispositivo
+    val requestCurrentLocation: (onReady: (Location?) -> Unit) -> Unit = { onReady ->
+        val token = CancellationTokenSource() //Cancela se o escopo morrer; garante chamada unica
+        fusedLocationClient
+            .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, token.token)
+            .addOnSuccessListener { onReady(it) } //Retorna a localizacao mais recente disponivel
+            .addOnFailureListener { onReady(null) } //Em erro, devolve null para fallback na ultima conhecida
+    } //Funcao para obter a localizacao atual no momento da acao
+
+    var lastLocation by remember { mutableStateOf<Location?>(null) } //Le a ultima localizacao conhecida do dispositivo
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasLocationPermission = isGranted
         if (isGranted) {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            requestCurrentLocation { location ->
                 if (location != null) {
-                    lastLocation = location
+                    lastLocation = location // atualiza assim que a permissão é dada
                 }
             }
         }
@@ -268,17 +279,20 @@ fun EtanolOuGasolina_EstendidoApp() {
                 Toast.LENGTH_SHORT
             ).show()
             return@onSaveFavorite
-        } //Se não tiver valores válidos, não salva e mostra uma mensagem de erro
+        } //Se nao houver valores validos, nao salva e mostra erro
 
         if (!hasLocationPermission) {
-            locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION)
-        } else {
+            locationPermissionLauncher.launch(FINE_LOCATION_PERMISSION) //Pede permissão antes de buscar a localização
+            return@onSaveFavorite //Sai; quando a permissão for dada, tente salvar de novo
+        }
+
+        requestCurrentLocation { location ->
+            lastLocation = location ?: lastLocation //Usa a posição atual; se falhar, mantém a última conhecida
             val nextId = favorites.size + 1
             stationNameInput = context.getString(R.string.station_default_name, nextId)
-            showSaveDialog = true
+            showSaveDialog = true //Só abre o diálogo após tentar obter a localização mais recente
         }
-    } //Se não tiver permissão para acessar a localização, solicita a permissão e salva o favorito.
-    //Se tiver a permissão, o dialogo de salvamento é aberto.
+    } //Fluxo de salvamento: valida valores, garante permissão e busca a localização atual antes de abrir o diálogo
 
 
     // LÓGICA PARA EDIÇÃO/EXCLUSÃO DE FAVORITOS
@@ -1518,3 +1532,7 @@ fun FavoriteStationCard(
         }
     }
 }
+
+
+
+
